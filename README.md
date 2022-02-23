@@ -16,6 +16,9 @@ Install Dependencies
 yarn
 ```
 
+Create `.env` file with the db credentials given to [https://github.com/janpio](https://github.com/janpio)
+
+
 Generate Prisma Client
 ```bash
 yarn prisma db pull
