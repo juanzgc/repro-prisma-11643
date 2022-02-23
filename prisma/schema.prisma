@@ -1,0 +1,257 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+  oauth_token_secret String?
+  oauth_token        String?
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  first_name    String?
+  last_name     String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  stripe        String?   @unique
+  rider_profile Json?
+  phone_number  String?
+  auth0_id      String    @unique
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+  full_name     String?
+  accounts      Account[]
+  sessions      Session[]
+  order         order[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model bike_rental {
+  id                                     Int                                      @id @unique @default(autoincrement())
+  created_at                             DateTime?                                @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime?                                @default(now()) @db.Timestamptz(6)
+  is_active                              Boolean                                  @default(true)
+  title                                  String
+  bike_name                              String
+  brand                                  String
+  image                                  String
+  bike_slug                              String                                   @unique(map: "bike_rental_bike_slug_v2_key")
+  bike_rental_variant                    bike_rental_variant[]
+  junction_bike_rental_variant__location junction_bike_rental_variant__location[]
+  order_item                             order_item[]
+  product_location                       product_location[]
+}
+
+model bike_rental_variant {
+  id                                     Int                                      @id @unique @default(autoincrement())
+  created_at                             DateTime?                                @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime?                                @default(now()) @db.Timestamptz(6)
+  bike_id                                Int
+  sku                                    String                                   @unique
+  variant_value                          String
+  base_price                             Int
+  bike_rental                            bike_rental                              @relation(fields: [bike_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  junction_bike_rental_variant__location junction_bike_rental_variant__location[]
+  order_item                             order_item[]
+}
+
+model junction_bike_rental_variant__location {
+  id                  Int                 @id @unique @default(autoincrement())
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  location_id         Int
+  variant_id          Int
+  bike_id             Int
+  bike_rental         bike_rental         @relation(fields: [bike_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  location            location            @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bike_rental_variant bike_rental_variant @relation(fields: [variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([location_id, variant_id], map: "junction_bike_rental_variant__locati_location_id_variant_id_key")
+}
+
+model location {
+  id                                     Int                                      @id @unique @default(autoincrement())
+  created_at                             DateTime?                                @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime?                                @default(now()) @db.Timestamptz(6)
+  city                                   String                                   @unique
+  city_slug                              String                                   @unique
+  country                                String
+  country_slug                           String
+  seo_description                        String
+  image                                  String
+  junction_bike_rental_variant__location junction_bike_rental_variant__location[]
+  location_zone                          location_zone?
+  order                                  order[]
+  product_location                       product_location[]
+  rental__location                       rental__location[]
+}
+
+model location_zone {
+  id          Int       @id @default(autoincrement())
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  location_id Int       @unique
+  geo_map     Json
+  location    location  @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model order {
+  id               Int           @id @default(autoincrement())
+  created_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  email            String
+  total            Decimal       @db.Decimal(12, 2)
+  currency         String
+  city_slug        String
+  is_delivery      Boolean
+  status           order_status? @default(Awaiting_Fulfillment)
+  updated_at       DateTime?     @default(now()) @db.Timestamptz(6)
+  payment_intent   String?       @unique
+  payment_method   String?
+  delivery_address Json?
+  phone_number     String?
+  start_date       DateTime?     @db.Date
+  end_date         DateTime?     @db.Date
+  location         location      @relation(fields: [city_slug], references: [city_slug], onDelete: NoAction, onUpdate: NoAction)
+  User             User          @relation(fields: [email], references: [email], onDelete: NoAction, onUpdate: NoAction)
+  order_item       order_item[]
+}
+
+model order_item {
+  id                      Int                  @id @default(autoincrement())
+  created_at              DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?            @default(now()) @db.Timestamptz(6)
+  status                  order_item_status?   @default(Awaiting_Fulfillment)
+  rider_profile           Json?
+  sub_total               Decimal              @db.Decimal(12, 2)
+  currency                String
+  bike_rental_variant_id  Int?
+  start_date              DateTime             @db.Date
+  end_date                DateTime             @db.Date
+  order                   Int
+  product_options         Json?
+  rental_id               Int?
+  collection              String?
+  bike_rental_id          Int?
+  product_link            String?
+  image                   String?
+  product_title           String?
+  bike_rental             bike_rental?         @relation(fields: [bike_rental_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bike_rental_variant     bike_rental_variant? @relation(fields: [bike_rental_variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  order_orderToorder_item order                @relation(fields: [order], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rental                  rental?              @relation(fields: [rental_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model product_location {
+  id                 Int          @id(map: "product_location_v2_pkey") @default(autoincrement())
+  created_at         DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?    @default(now()) @db.Timestamptz(6)
+  bike_rental_id     Int?
+  rental_id          Int?
+  min_booking_length Int?         @default(1)
+  weekend_2_day_min  Boolean?     @default(false)
+  booking_lead       Int?         @default(1)
+  location_id        Int?
+  seo_description    Json         @default("{\"type\": \"doc\", \"content\": [{\"type\": \"paragraph\"}]}")
+  how_it_works       Json         @default("{\"type\": \"doc\", \"content\": [{\"type\": \"paragraph\"}]}")
+  bike_rental        bike_rental? @relation(fields: [bike_rental_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "product_location_v2_bike_rental_id_fkey")
+  location           location?    @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "product_location_v2_location_id_fkey")
+  rental             rental?      @relation(fields: [rental_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "product_location_v2_rental_id_fkey")
+
+  @@unique([location_id, bike_rental_id])
+  @@unique([location_id, rental_id])
+}
+
+model rental {
+  id               Int                @id @default(autoincrement())
+  title            String
+  rental_slug      String             @unique
+  image            String
+  is_active        Boolean?           @default(true)
+  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  brand            String?
+  rental_type      rental_type
+  order_item       order_item[]
+  product_location product_location[]
+  rental__location rental__location[]
+}
+
+model rental__location {
+  id           Int          @id @default(autoincrement())
+  created_at   DateTime?    @default(now()) @db.Timestamptz(6)
+  location_id  Int
+  rental_id    Int
+  base_price   Int
+  payment_type payment_type @default(daily)
+  location     location     @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rental       rental       @relation(fields: [rental_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([location_id, rental_id])
+}
+
+enum order_item_status {
+  Awaiting_Fulfillment @map("Awaiting Fulfillment")
+  Ready_for_Delivery @map("Ready for Delivery")
+  Ready_for_Pickup @map("Ready for Pickup")
+  Delivered
+  Picked_Up @map("Picked Up")
+  Ready_for_Collection @map("Ready for Collection")
+  Returned
+  Completed
+  Refunded
+}
+
+enum order_status {
+  Awaiting_Fulfillment @map("Awaiting Fulfillment")
+  In_Progress @map("In Progress")
+  Complete
+  Refunded
+  Partially_Refunded
+}
+
+enum payment_type {
+  daily
+  weekly
+  monthly
+}
+
+enum rental_type {
+  tour
+  accessory
+}
