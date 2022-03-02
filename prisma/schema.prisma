@@ -1,6 +1,5 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -9,7 +8,7 @@ datasource db {
 }
 
 model Account {
-  id                 String  @id @default(cuid())
+  id                 String  @id
   userId             String
   type               String
   provider           String
@@ -23,21 +22,21 @@ model Account {
   session_state      String?
   oauth_token_secret String?
   oauth_token        String?
-  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
 model Session {
-  id           String   @id @default(cuid())
+  id           String   @id
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String    @id
   first_name    String?
   last_name     String?
   email         String    @unique
@@ -49,8 +48,8 @@ model User {
   auth0_id      String    @unique
   updated_at    DateTime? @default(now()) @db.Timestamptz(6)
   full_name     String?
-  accounts      Account[]
-  sessions      Session[]
+  Account       Account[]
+  Session       Session[]
   order         order[]
 }
 

@@ -7,7 +7,8 @@ module.exports = {
     "tailwindui.com",
     "via.placeholder.com",
     "zwqamokcilroqrlensie.supabase.in",
-    "s.gravatar.com"
+    "s.gravatar.com",
+    "res.cloudinary.com"
     ],
   },
   formats: ['image/avif', 'image/webp'],
